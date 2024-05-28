@@ -68,8 +68,8 @@ test_db_storage.py'])
                             "{:s} method needs a docstring".format(func[0]))
 
 
-class TestFileStorage(unittest.TestCase):
-    """Test the FileStorage class"""
+class TestDBStorage(unittest.TestCase):
+    """Test the DBStorage class"""
     @unittest.skipIf(models.storage_t != 'db', "not testing db storage")
     def test_all_returns_dict(self):
         """Test that all returns a dictionaty"""
@@ -78,34 +78,90 @@ class TestFileStorage(unittest.TestCase):
     @unittest.skipIf(models.storage_t != 'db', "not testing db storage")
     def test_all_no_class(self):
         """Test that all returns all rows when no class is passed"""
+        state_data = {"name": "Nairobi"}
+        new_state = State(**state_data)
+        models.storage.new(new_state)
+        models.storage.save()
+
+        session = models.storage.Storage_session
+
+        all_objects = session.query(State).all()
+
+        self.assertTrue(len(all_objects) > 0)
 
     @unittest.skipIf(models.storage_t != 'db', "not testing db storage")
     def test_new(self):
         """test that new adds an object to the database"""
+        state_data = {"name": "Lagos"}
+        new_state = State(state_data)
+
+        models.storage.new(new_state)
+
+        session = models.storage.DBStorage_session
+
+        retrived_state = session.query(State).filter_by(id=new_state).first()
+
+        self.assertEqual(retrived_state.id, new_state.id)
+        self.assertEqual(retrived_state.name, new_state.name)
+        self.assertIsNone(retrived_state)
 
     @unittest.skipIf(models.storage_t != 'db', "not testing db storage")
     def test_save(self):
         """Test that save properly saves objects to file.json"""
+        state_data = {"name": "Addis Ababa"}
+        new_state = State(state_data)
+
+        models.storage.new(new_state)
+
+        models.storage.save()
+
+        session = models.storage.DBStorage_session
+
+        retrived_state = session.query(State).filter_by(id=new_state).first()
+
+        self.assertEqual(retrived_state.id, new_state.id)
+        self.assertEqual(retrived_state.name, new_state.name)
+        self.assertIsNone(retrived_state)
 
     @unittest.skipIf(models.storage_t != 'db', "not testing db storage")
     def test_get(self):
         """Test the get method"""
-        new_user = User(email="test@test.com", password="test")
-        new_user.save()
-        user = models.storage_t .get(User, new_user.id)
-        self.assertEqual(user.id, new_user.id)
-        self.assertEqual(user.email, "test@test.com")
-        models.storage_t.delete(user)
+        storage = models.storage
+
+        storage.reload
+
+        state_data = {"name": "Maldiver"}
+
+        state_instance = State(**state_data)
+        storage.save()
+        retrived_state = storage.get(State, state_instance.id)
+
+        self.assertEqual(state_instance, retrived_state)
+
+        fake_state_id = storage.get(State, 'fake_id')
+        self.assertEqual(fake_state_id, None)
 
     @unittest.skipIf(models.storage_t != 'db', "not testing db storage")
     def test_count(self):
         """Test the count method"""
-        initial_count = models.storage_t.count()
-        new_user = User(email="test@test.com", password="test")
-        new_user.save()
-        self.assertEqual(models.storage_t.count(), initial_count + 1)
-        self.assertEqual(models.storage_t.count(User), 1)
-        models.storage_t.delete(new_user)
+        storage = models.storage
+        storage.reload()
+        state_data = {"name": "Sudan"}
+        state_instance = State(**state_data)
+        storage.new(state_instance)
+
+        city_data = {"name": "Rocky", "state_id": state_instance.id}
+        city_instance = City(**city_data)
+        storage.new(city_instance)
+        storage.save()
+
+        state_occurance = storage.count(State)
+        self.assertEqual(state_occurance, len(storage.all(State)))
+
+        all_occurence = storage.count()
+        self.assertEqual(all_occurence, len(storage.all()))
+
 
 if __name__ == '__main__':
+
     unittest.main()  
